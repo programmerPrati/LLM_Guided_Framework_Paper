@@ -1,0 +1,59 @@
+class assign_Targets_Policy(nn.Module):
+    def __init__(self, input_size, output_size=1): # output size needs to match number of outputs classifications
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(input_size, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16),
+            #nn.ReLU(),
+            nn.Linear(16, output_size),
+            #nn.Sigmoid()
+            # nn.Softmax()
+        )
+        #self.optimizer = optim.SGD(self.parameters(), lr=0.01)
+        self.optimizer = optim.Adam(self.parameters(), lr=0.001)
+        total = 60 + 40
+        w0 = total / (2 * 60)  # for class 0
+        w1 = total / (2 * 40)  # for class 1
+        weights = torch.tensor([w0, w1], dtype=torch.float32)
+        self.losses = [] # to plot
+        #self.criterion = nn.CrossEntropyLoss() # weight = weights
+        self.criterion = nn.BCEWithLogitsLoss()
+        #self.criterion = nn.MSELoss() # for linear regression
+        #self.criterion = nn.BCELoss()  #  Binary Cross-Entropy with sigmoid
+
+    def forward(self, x):
+        # x = x/20
+        return self.fc(x)
+
+
+    def train(self, data, epochs=10):
+        #self.losses = []
+        for epoch in range(epochs):
+            epoch_losses = []
+            for input, label in data:
+                pred = self(input)  # shape: (1,) or scalar tensor
+                label_tensor = torch.tensor([label], dtype=torch.float)  # shape: (1,), needed for single output
+                #loss = self.criterion(pred, label_tensor)
+                loss = custom_loss(pred, label_tensor)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+
+                epoch_losses.append(loss.item())
+
+            avg_epoch_loss = sum(epoch_losses) / len(epoch_losses)
+            self.losses.append(avg_epoch_loss)  # Store average epoch loss
+            #print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_epoch_loss:.4f}")
+
+
+
+    def predict(self, state_tensor):
+        with torch.no_grad():  # No need to track gradients during prediction
+            #self.eval()  # Set the network to evaluation mode
+            pred = self(state_tensor)  # Shape: [output_size]
+            #pred = torch.round(output)
+            #print(rounded_output)
+        return pred # typecast to int as that's what we need, we are passing the index where the highest value occurred

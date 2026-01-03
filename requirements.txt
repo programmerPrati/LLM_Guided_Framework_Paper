@@ -1,0 +1,6 @@
+pygame
+numpy
+torch
+matplotlib
+requests
+openai
